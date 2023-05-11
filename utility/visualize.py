@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 
 def plot_curve_error(data_mean, data_std, x_label, y_label, title, filename=None, show=True, xscale='linear', yscale='linear'):
 
+    data_mean = np.array(data_mean)
+    data_std = np.array(data_mean)
+
     fig = plt.figure(figsize=(8, 6))
     plt.title(title)
 

@@ -1,92 +1,151 @@
+import torch
 import torch.nn as nn
-from torchsummary import summary
+from torch.nn.utils.convert_parameters import  parameters_to_vector, vector_to_parameters
 
 
-class MLP(nn.Module): 
 
-    def __init__(self, out_dim=10, in_channel=1, img_sz=32, hidden_dim=100, n_hidden_layer=2):
+class Model(nn.Module):
+
+    def __init__(self, model_type, out_dim=10, in_channel=1, img_sz=32, hidden_dim=100, n_hidden_layer=2, n_head=1, conv1_channel=20, conv2_channel=50):
         
-        super(MLP, self).__init__()
+        super(Model, self).__init__()
 
-        self.in_dim = in_channel*img_sz*img_sz
+        self.out_dim = out_dim
+        self.in_channel = in_channel
+        self.img_sz = img_sz
+        self.hidden_dim = hidden_dim
+        self.n_hidden_layer = n_hidden_layer
+        self.n_head = n_head
+        self.conv1_channel = conv1_channel
+        self.conv2_channel = conv2_channel
+
+        if model_type == 'MLP':
+            self.MLP()
+        elif model_type == 'Lenet':
+            self.Lenet()
+        else:
+            assert False, 'Wrong model_type'
+
+        pass
+
+    def MLP(self):
+
+        self.conv = None
+
+        self.in_dim = self.in_channel * self.img_sz * self.img_sz
         layers = []
-        layers += [nn.Linear(self.in_dim, hidden_dim)]
-        #layers += [nn.BatchNorm1d(hidden_dim)]
+        layers += [nn.Linear(self.in_dim, self.hidden_dim)]
         layers += [nn.ReLU(inplace=True)]
-        for i in range(n_hidden_layer-1):
-            layers += [nn.Linear(hidden_dim, hidden_dim)]
-            #layers += [nn.BatchNorm1d(hidden_dim)]
+        for i in range(self.n_hidden_layer - 1):
+            layers += [nn.Linear(self.hidden_dim, self.hidden_dim)]
             layers += [nn.ReLU(inplace=True)]
-        layers += [nn.Linear(hidden_dim, out_dim)]
 
         self.linear = nn.Sequential(*layers)
 
+        self.heads = nn.ModuleDict()
+        for i in range(self.n_head):
+            self.heads[str(i)] = nn.Linear(self.hidden_dim, self.out_dim) 
+
         pass
 
-    def forward(self, x):
+    def Lenet(self):
+
+        feat_map_sz = self.img_sz//4
+        self.in_dim = self.conv2_channel * feat_map_sz * feat_map_sz
+
+        self.conv = nn.Sequential(
+            nn.Conv2d(self.in_channel, self.conv1_channel, 5, padding=2),
+            nn.BatchNorm2d(self.conv1_channel),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(self.conv1_channel, self.conv2_channel, 5, padding=2),
+            nn.BatchNorm2d(self.conv2_channel),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),
+            nn.Flatten(),
+        )
+
+        self.linear = nn.Sequential(
+            nn.Linear(self.in_dim, self.hidden_dim),
+            nn.ReLU(inplace=True),
+        )
+
+        self.heads = nn.ModuleDict()
+        for i in range(self.n_head):
+            self.heads[str(i)] = nn.Linear(self.hidden_dim, self.out_dim) 
+
+        pass
+
+    def forward(self, x, head_num=0):
+        if self.n_head == 1:
+            head_num = 0
+
+        if self.conv is not None:
+            x = self.conv(x)
         x = self.linear(x.view(-1,self.in_dim))
+        x = self.heads[str(head_num)](x)
+
         return x
-
-
-
-class CNN(nn.Module): 
-
-    def __init__(self, in_channel=1, out_dim=10, img_size=32, feature_dim=2, n_feature_layer=1, hidden_dim=100, n_hidden_layer=1):
-        
-        super(CNN, self).__init__()
-
-        threshold_ReLU = 0.1
-        in_dim = in_channel * img_size * img_size
-
-        feature_layers = []
-        feature_layers += [nn.Conv2d(in_channel, feature_dim, kernel_size=3, stride=2, padding=1, bias=True)]
-        feature_layers += [nn.BatchNorm2d(feature_dim),]
-        feature_layers += [nn.LeakyReLU(threshold_ReLU, inplace=True)]
-        feature_dim_in = feature_dim
-        feature_dim_out = feature_dim * 2
-        img_size = img_size // 2
-        in_dim = feature_dim * img_size * img_size
-        for i in range(n_feature_layer-1):
-            feature_layers += [nn.Conv2d(feature_dim_in, feature_dim_out, kernel_size=3, stride=2, padding=1, bias=True)]
-            feature_layers += [nn.BatchNorm2d(feature_dim_out),]
-            feature_layers += [nn.LeakyReLU(threshold_ReLU, inplace=True)]
-            img_size = img_size // 2
-            in_dim = feature_dim_out * img_size * img_size
-            feature_dim_in *= 2
-            feature_dim_out *= 2            
-        
-        self.feature = nn.Sequential(*feature_layers)
-
-        layers = []
-        layers += [nn.Linear(in_dim, hidden_dim)]
-        #layers += [nn.BatchNorm1d(hidden_dim)]
-        layers += [nn.ReLU(inplace=True)]
-        for i in range(n_hidden_layer-1):
-            layers += [nn.Linear(hidden_dim, hidden_dim)]
-            #layers += [nn.BatchNorm1d(hidden_dim)]
-            layers += [nn.ReLU(inplace=True)]
-        layers += [nn.Linear(hidden_dim, out_dim)]
-
-        self.classifier = nn.Sequential(*layers)
-
-        pass
-
-    def forward(self, x):
-
-        z = self.feature(x)
-        z_ = nn.Flatten()(z)
-        y = self.classifier(z_)
-
-        return y
-
-
-def create_model(config):
     
-    if config.model == 'MLP':
-        network = MLP(hidden_dim=config.hidden_dim, n_hidden_layer=config.n_hidden_layer).to(config.device)
-    elif config.model == 'CNN':
-        network = CNN(feature_dim=config.feature_dim, n_feature_layer=config.n_feature_layer, hidden_dim=config.hidden_dim, n_hidden_layer=config.n_hidden_layer).to(config.device)
-    summary(network, input_size=(1,32,32))
+    def body_param_vector(self, skip_conv=True):
 
-    return network
+        if skip_conv:
+            return parameters_to_vector(self.linear.parameters())
+
+        else:
+            return parameters_to_vector(list(self.conv.parameters()) + list(self.linear.parameters()))
+
+    def head_param_vector(self, head_num=0):
+        if self.n_head == 1:
+            head_num = 0
+
+        return parameters_to_vector(self.heads[str(head_num)].parameters())
+    
+    def body_grad_vector(self, skip_conv=True):
+        vector = []
+        device = None
+
+        if skip_conv == False:
+            for p in self.conv.parameters():
+                vector.append(p.grad.view(-1))
+
+        for p in self.linear.parameters():
+            if device is None:
+                device = p.device
+            vector.append(p.grad.view(-1))
+
+        return torch.cat(vector).to(device)
+    
+    def head_grad_vector(self, head_num=0):
+        if self.n_head == 1:
+            head_num = 0
+
+        vector = []
+        device = None
+
+        for p in self.heads[str(head_num)].parameters():
+            if device is None:
+                device = p.device
+            vector.append(p.grad.view(-1))
+
+        return torch.cat(vector).to(device)
+    
+    def update_body(self, param_vector, skip_conv=True):
+
+        if skip_conv:
+            vector_to_parameters(param_vector, self.linear.parameters())
+            
+        else:
+            vector_to_parameters(param_vector, list(self.conv.parameters()) + list(self.linear.parameters()))
+            
+    def update_head(self, param_vector, head_num=0):
+        if self.n_head == 1:
+            head_num = 0
+
+        vector_to_parameters(param_vector, self.heads[str(head_num)].parameters())
+
+
+    
+
+
 

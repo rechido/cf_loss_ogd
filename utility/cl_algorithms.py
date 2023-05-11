@@ -60,10 +60,10 @@ class Orthonormal_Basis_Buffer(Dataset):
             projections = torch.matmul(prev_basis_set, new_basis.T) # (m, p)*(p, 1)=(m, 1) # v_dot_U
             project_vectors = projections * prev_basis_set # broadcasting (m,1) to (m,p)
             project_vector = torch.sum(project_vectors, dim=0)
-            vector -= project_vector
-            vector = torch.round(vector * 1e5) / 1e5 # truncate elements less than 1e-5
+            new_basis -= project_vector
 
-            self.ortho_basis_set[self.length] = F.normalize(new_basis, p=2.0, dim=0)
-            self.length += 1
+            if torch.norm(new_basis, p=2.0, dim=-1) > 1e-3:
+                self.ortho_basis_set[self.length] = F.normalize(new_basis.squeeze(), p=2.0, dim=-1)
+                self.length += 1
 
         pass
