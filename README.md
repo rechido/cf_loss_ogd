@@ -23,7 +23,7 @@ The numbers in the results represent the average accuracy, which is a common met
 where a_ij is the accuracy of the j-th test set after completing the learning of the i-th training set.
 
 
-1. Characteristic Investigation
+1. Characteristic Investigation (Our method)
 <p align="center">
   <img src="resources/figure1.png" />
 </p>
