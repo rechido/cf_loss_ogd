@@ -48,7 +48,7 @@ Please uncomment the line you want to run.
 
 You may need to download the benchmark datasets at the designated path before running.
 
-Check various options in the script file for other experimental setups.
+Check various options given in the script file as examples for other experimental setups.
 
 ## Reference
 
