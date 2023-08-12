@@ -1,7 +1,10 @@
+import numpy as np
 from tqdm import tqdm
 
 import torch
+from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
+import torch.autograd.functional as F
 
 
 
@@ -104,3 +107,51 @@ def compute_prediction_gradients(config, data, label, network, task_id):
         gradient_vectors[n] = network.body_grad_vector()
     
     return gradient_vectors.detach()
+
+
+
+def compute_condition_number(config, dataset, network, task_id):
+    network.eval()
+
+    data, labels = dataset[:]
+    d = data.to(config.device)
+
+    def func(params):
+        params = vector_to_param(params, network)
+        for w, p in zip(network.linear.parameters(), params): # initialize perturbed model parameters
+            p = p.to(config.device)
+            w.detach_()
+            w.copy_(p)
+        output = network(d, task_id)
+        output_mean = output.mean()
+        return output_mean
+    
+    params = network.body_param_vector()
+    params.detach_()
+    params.requires_grad_()
+    h = F.hessian(func, params)
+    h_norm = torch.linalg.matrix_norm(h)
+    print("F norm of h: {}".format(h_norm))
+    h_trace = torch.trace(h)
+    print("trace of h : {}".format(torch.trace(h)))
+    s = torch.linalg.svdvals(h)
+    eigen_max = torch.max(s)
+    print("eigen_max: {}".format(eigen_max))
+    identity_matrix = torch.eye(h.size(0)).to(h.device)
+    ratio = 0.1
+    constant = eigen_max * ratio  # the regularization constant normalized by the maximum eigenvalue.
+    h += constant * identity_matrix # add a small number to the diagonal of the Hessian as regularization to make nonsingular matrix (to avoid zero eigenvalues)
+    condition_number = torch.linalg.cond(h)
+    print("condition_number: {}".format(condition_number))
+
+    with open(config.save_folder + 'condition_number.txt', 'at') as f:
+        f.write('condition_number {}: {}\n'.format(task_id, condition_number))
+        f.write('eigen_max {}: {}\n'.format(task_id, eigen_max))
+        f.write('h_norm {}: {}\n'.format(task_id, h_norm))
+        f.write('h_trace {}: {}\n'.format(task_id, h_trace))
+        f.write('h_size {}: {}\n'.format(task_id, h.size()))
+        f.write('ratio  {}: {}\n'.format(task_id, ratio))
+
+
+    assert False, "condition number computed"
+

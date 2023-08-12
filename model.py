@@ -43,8 +43,8 @@ class Model(nn.Module):
         self.linear = nn.Sequential(*layers)
 
         self.heads = nn.ModuleDict()
-        for i in range(self.n_head):
-            self.heads[str(i)] = nn.Linear(self.hidden_dim, self.out_dim) 
+        for head_id in range(self.n_head):
+            self.heads[str(head_id)] = nn.Linear(self.hidden_dim, self.out_dim) 
 
         pass
 
@@ -76,16 +76,17 @@ class Model(nn.Module):
 
         pass
 
-    def forward(self, x, head_num=0):
-        if self.n_head == 1:
-            head_num = 0
-
+    def forward(self, x, task_ids=None):
+        if self.n_head == 1 or task_ids == None:
+            task_ids = torch.zeros(x.shape[0])
         if self.conv is not None:
             x = self.conv(x)
         x = self.linear(x.view(-1,self.in_dim))
-        x = self.heads[str(head_num)](x)
-
-        return x
+        y = torch.zeros(x.shape[0], self.out_dim, device=x.device)
+        for head_id in range(self.n_head):
+            y_ = self.heads[str(head_id)](x)
+            y[task_ids == head_id] = y_[task_ids == head_id]
+        return y
     
     def body_param_vector(self, skip_conv=True):
 
@@ -95,11 +96,11 @@ class Model(nn.Module):
         else:
             return parameters_to_vector(list(self.conv.parameters()) + list(self.linear.parameters()))
 
-    def head_param_vector(self, head_num=0):
+    def head_param_vector(self, head_id=0):
         if self.n_head == 1:
-            head_num = 0
+            head_id = 0
 
-        return parameters_to_vector(self.heads[str(head_num)].parameters())
+        return parameters_to_vector(self.heads[str(head_id)].parameters())
     
     def body_grad_vector(self, skip_conv=True):
         vector = []
@@ -116,14 +117,14 @@ class Model(nn.Module):
 
         return torch.cat(vector).to(device)
     
-    def head_grad_vector(self, head_num=0):
+    def head_grad_vector(self, head_id=0):
         if self.n_head == 1:
-            head_num = 0
+            head_id = 0
 
         vector = []
         device = None
 
-        for p in self.heads[str(head_num)].parameters():
+        for p in self.heads[str(head_id)].parameters():
             if device is None:
                 device = p.device
             vector.append(p.grad.view(-1))
@@ -138,11 +139,17 @@ class Model(nn.Module):
         else:
             vector_to_parameters(param_vector, list(self.conv.parameters()) + list(self.linear.parameters()))
             
-    def update_head(self, param_vector, head_num=0):
+    def update_head(self, param_vector, head_id=0):
         if self.n_head == 1:
-            head_num = 0
+            head_id = 0
 
-        vector_to_parameters(param_vector, self.heads[str(head_num)].parameters())
+        vector_to_parameters(param_vector, self.heads[str(head_id)].parameters())
+
+    def get_parameters(self):
+        if self.conv is not None:
+            return list(self.conv.parameters()) + list(self.linear.parameters())
+        else:
+            return list(self.linear.parameters())
 
 
     

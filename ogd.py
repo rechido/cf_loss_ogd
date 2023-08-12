@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.dataloader import default_collate
 
 
@@ -10,6 +10,40 @@ import copy
 
 from utility.utility import compute_prediction_gradients, vector_to_param, check_orthogonality
 from utility.visualize import plot_curve_error
+
+
+
+class Orthonormal_Basis_Buffer(Dataset):
+    def __init__(self, buffer_size, param_dim, device):
+        self.ortho_basis_set = torch.zeros(buffer_size, param_dim, dtype=torch.float32, device=device)
+        self.buffer_size = buffer_size
+        self.length = 0
+
+        pass
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, idx):
+        return self.ortho_basis_set[idx]
+
+    def add(self, grad_vectors):
+
+        for vector in grad_vectors:
+        
+            # orthonormalization
+            new_basis = vector.detach().clone().reshape(1, -1)
+            prev_basis_set = self.ortho_basis_set[:self.length] # (m, p)
+            projections = torch.matmul(prev_basis_set, new_basis.T) # (m, p)*(p, 1)=(m, 1) # v_dot_U
+            project_vectors = projections * prev_basis_set # broadcasting (m,1) to (m,p)
+            project_vector = torch.sum(project_vectors, dim=0)
+            new_basis -= project_vector
+
+            if torch.norm(new_basis, p=2.0, dim=-1) > 1e-3:
+                self.ortho_basis_set[self.length] = F.normalize(new_basis.squeeze(), p=2.0, dim=-1)
+                self.length += 1
+
+        pass
 
 
 
@@ -36,10 +70,7 @@ def compute_new_basis(config, train_dataset, labels, network, task_id):
 def ogd(config, train_dataset, label, network, task_id):
 
     loader = DataLoader(train_dataset, batch_size=config.n_basis, shuffle=True, collate_fn=lambda x: tuple(x_.to(config.device) for x_ in default_collate(x)))
-    for x, y in loader:
-        data = x
-        label = y
-        break
+    data, label = next(iter(loader))
 
     new_basis = compute_prediction_gradients(config, data, label, network, task_id)
 
@@ -50,10 +81,7 @@ def ogd(config, train_dataset, label, network, task_id):
 def pca_ogd(config, train_dataset, label, network, task_id):
 
     loader = DataLoader(train_dataset, batch_size=config.n_sample, shuffle=True, collate_fn=lambda x: tuple(x_.to(config.device) for x_ in default_collate(x)))
-    for x, y in loader:
-        data = x
-        label = y
-        break
+    data, label = next(iter(loader))
 
     new_basis = compute_prediction_gradients(config, data, label, network, task_id)
 
