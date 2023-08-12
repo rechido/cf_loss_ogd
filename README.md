@@ -58,5 +58,5 @@ Code
 https://github.com/tldoan/PCA-OGD
 
 Paper
-1. https://arxiv.org/pdf/2010.04003.pdf
+1. http://proceedings.mlr.press/v108/farajtabar20a/farajtabar20a.pdf
 2. http://proceedings.mlr.press/v130/doan21a/doan21a.pdf
