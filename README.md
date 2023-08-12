@@ -44,7 +44,7 @@ Run 'script.sh' file as follows:
 ```
 bash script.sh
 ```
-Please uncomment out the line you want to run.
+Please uncomment the line you want to run.
 
 You may need to download the benchmark datasets at the designated path before running.
 
