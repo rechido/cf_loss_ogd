@@ -12,4 +12,8 @@ The experiments have done on Split-MNIST, Permuted-MNIST, Split-CIFAR100.
 
 ## How to use
 
-Run 'script.sh' file through desired settings. You may need to download the benchmark datasets at the designated path.
+Run 'script.sh' file through desired settings as follows:
+```
+bash script.sh
+```
+You may need to download the benchmark datasets at the designated path before running.
