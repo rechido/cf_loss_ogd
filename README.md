@@ -40,10 +40,12 @@ where a_ij is the accuracy of the j-th test set after completing the learning of
 
 ## How to use
 
-Run 'script.sh' file through desired settings as follows:
+Run 'script.sh' file as follows:
 ```
 bash script.sh
 ```
+Please uncomment out the line you want to run.
+
 You may need to download the benchmark datasets at the designated path before running.
 
 Check various options in the script file for other experimental setups.
