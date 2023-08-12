@@ -49,3 +49,20 @@ Please uncomment the line you want to run.
 You may need to download the benchmark datasets at the designated path before running.
 
 Check various options in the script file for other experimental setups.
+
+## Reference
+
+Our code is based on the preceding study as follows:
+
+Code
+https://github.com/tldoan/PCA-OGD
+
+Paper
+```
+@article{doan2020theoretical,
+  title={A Theoretical Analysis of Catastrophic Forgetting through the NTK Overlap Matrix},
+  author={Doan, Thang and Bennani, Mehdi and Mazoure, Bogdan and Rabusseau, Guillaume and Alquier, Pierre},
+  journal={arXiv preprint arXiv:2010.04003},
+  year={2020}
+}
+```
