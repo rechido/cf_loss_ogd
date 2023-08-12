@@ -50,9 +50,9 @@ You may need to download the benchmark datasets at the designated path before ru
 
 Check various options given in the script file as examples for other experimental setups.
 
-## Reference
+## References
 
-Our code is based on the preceding study as follows:
+Our code is based on the preceding studies as follows:
 
 Code
 https://github.com/tldoan/PCA-OGD
