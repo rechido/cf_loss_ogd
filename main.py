@@ -21,13 +21,13 @@ from model import Model
 from ogd import Orthonormal_Basis_Buffer, compute_new_basis
 from dataset import make_dataset
 from ewc import EWC
-from replay import Episodic_Memory_Buffer, AGEM, Experience_Replay
+from agem import AGEM
 
 
 # Setup Parameters
 parser = argparse.ArgumentParser()
 
-parser.add_argument("--dataset_path", default="~/dataset/", type=str, help="path to your dataset  ex: /hdd1/dataset/")
+parser.add_argument("--dataset_path", default="~/dataset/CIFAR", type=str, help="path to your dataset  ex: /hdd1/dataset/")
 parser.add_argument("--dataset", default="split_mnist", type=str, choices=['split_mnist','permuted_mnist','split_cifar'])
 
 parser.add_argument("--n_task", default=5, type=int)
@@ -48,17 +48,17 @@ parser.add_argument("--n_hidden_layer", default=4, type=int)
 parser.add_argument("--conv1_channel", default=20, type=int)
 parser.add_argument("--conv2_channel", default=50, type=int)
 
-parser.add_argument("--method", default="replay", type=str, choices=['sgd','ogd','pca_ogd','train_basis','ewc','agem','replay'])
+parser.add_argument("--method", default="replay", type=str, choices=['sgd','ogd','pca_ogd','train_basis','ewc','agem'])
 
-# a-gem, replay
+# a-gem
 parser.add_argument("--n_examplar", default=100, type=int) # number of sample to consolidate into episodic memory buffer
 
 # ewc
-parser.add_argument("--ewc_method", default="ema", type=str, choices=['sma','ema']) # simple/exponential moving average
+parser.add_argument("--ewc_method", default="sma", type=str, choices=['sma','ema']) # simple/exponential moving average
 parser.add_argument("--fisher_sample", default=2500, type=int)
 parser.add_argument("--ema_constant", default=1.0, type=float) # exponential moving average between 0~1
 
-# ewc, replay
+# ewc
 parser.add_argument("--regularization_constant", default=1.0, type=float)
 
 # ogd, pca_ogd, train_basis
@@ -69,7 +69,7 @@ parser.add_argument("--n_sample", default=128, type=int)
 
 # train_basis
 parser.add_argument("--perturb_distance", default=0.5, type=float)
-parser.add_argument("--n_epoch_b", default=5000, type=int)
+parser.add_argument("--n_iter_b", default=5000, type=int)
 parser.add_argument("--learning_rate_u", default=1e-4, type=float)
 parser.add_argument("--lambda_distance", default=1e4, type=int)
 parser.add_argument("--lambda_orthogonal", default=1e2, type=int)
@@ -105,7 +105,6 @@ if config.model in ['Lenet']:
     config.save_folder += '{}_conv1_ch{}_conv2_ch{}_n_hidden_layer{}_hidden_dim{}/{}/' \
     .format(config.model, config.conv1_channel, config.conv2_channel, config.n_hidden_layer, config.hidden_dim, config.method)
 
-
 if config.method in ['ogd']:
     config.save_folder += 'basis{}/'.format(config.n_basis)
 
@@ -113,8 +112,8 @@ if config.method in ['pca_ogd', 'train_basis']:
     config.save_folder += 'basis{}_n_sample{}/'.format(config.n_basis, config.n_sample)
 
 if config.method in ['train_basis']:
-    config.save_folder += 'distance{}_epoch_b{}_lr_u{}_lambda_distance{}_lambda_orthogonal{}/' \
-        .format(config.perturb_distance, config.n_epoch_b, config.learning_rate_u, config.lambda_distance, config.lambda_orthogonal)
+    config.save_folder += 'distance{}_n_iter_b{}_lr_u{}_lambda_distance{}_lambda_orthogonal{}/' \
+        .format(config.perturb_distance, config.n_iter_b, config.learning_rate_u, config.lambda_distance, config.lambda_orthogonal)
     
 if config.method in ['ewc']:
     if config.ewc_method in ['sma']:
@@ -161,8 +160,6 @@ if config.method in ['ogd','pca_ogd','train_basis']:
     buffer = Orthonormal_Basis_Buffer(config.buffer_size, config.n_param, config.device)
 if config.method in ['agem']:    
     agem = AGEM()
-if config.method in ['replay']:    
-    er = Experience_Replay()
 if config.method in ['ewc']:
     ewc = EWC(network, config)
     ewc.update_means(network)
@@ -258,9 +255,6 @@ for task_id in range(config.n_task):
 
     if config.method in ['agem'] and task_id < config.n_task - 1: # save randomly sampled examplar set for replay
         agem.consolidate(train_dataset, config, task_id)
-
-    if config.method in ['replay'] and task_id < config.n_task - 1: # save randomly sampled examplar set for replay
-        er.consolidate(train_dataset, config, task_id)
 
     ###
 

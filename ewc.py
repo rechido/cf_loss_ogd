@@ -26,7 +26,7 @@ class EWC(object):
         for index in self.precision_matrices:
             if task_id > 0:
                 if config.ewc_method == 'ema':
-                    self.precision_matrices[index] = self.ema_constant * fisher_matrix[index] + (1 - self.ema_constant) * self.precision_matrices[index] # EWC++: exponential moving average
+                    self.precision_matrices[index] = self.ema_constant * fisher_matrix[index] + (1 - self.ema_constant) * self.precision_matrices[index]
                 elif config.ewc_method == 'sma':
                     self.precision_matrices[index] += fisher_matrix[index]
             else:

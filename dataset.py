@@ -119,7 +119,6 @@ def make_permuted_mnist(config, train_dataset, test_dataset):
 
 
 
-# split mnist for binary classification (even/odd)
 def make_split_mnist(config, train_dataset, test_dataset):
     # create data stream for online learning
 

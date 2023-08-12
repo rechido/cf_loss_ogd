@@ -114,7 +114,7 @@ def train_basis(config, train_dataset, network, task_id):
     distance_losses = []
     orthogonal_losses = []
     total_losses = []
-    for epoch_b in tqdm(range(config.n_epoch_b)):
+    for _ in tqdm(range(config.n_iter_b)):
 
         data_loader = DataLoader(train_dataset, batch_size=config.n_sample, shuffle=True, drop_last=True, collate_fn=lambda x: tuple(x_.to(config.device) for x_ in default_collate(x)))
 
@@ -166,9 +166,6 @@ def train_basis(config, train_dataset, network, task_id):
             optimizer.step()
 
             break
-
-        #with open(config.save_folder+'cf_loss_{}.txt'.format(task_id), 'at') as f:
-        #    f.write('{:.6f}\n'.format(cf_loss.item()))
 
     loss_log = 'task {}: cf_loss={:.6f}, distance_loss={:.6f}, orthogonal_loss={:.6f}, total_loss={:.6f}, max_cf={:.6f}\n'.format(task_id+1, cf_losses[-1], distance_losses[-1], orthogonal_losses[-1], total_losses[-1], max_cf)
     print(loss_log)
