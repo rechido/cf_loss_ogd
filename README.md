@@ -16,6 +16,12 @@ The experiments have done on Split-MNIST, Permuted-MNIST, Split-CIFAR100.
 
 The experimental results are presented below.
 
+The numbers in the results represent the average accuracy, which is a common metric widely used in continual learning as follows:
+<p align="center">
+  <img src="resources/equation23.png" />
+</p>
+where a_ij is the accuracy of the j-th test set after completing the learning of the i-th training set.
+
 1. Characteristic Investigation
 <p align="center">
   <img src="resources/figure1.png" />
